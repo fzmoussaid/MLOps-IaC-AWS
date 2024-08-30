@@ -64,34 +64,66 @@ resource "aws_lambda_function" "inference_lambda" {
   }
 }
 
-resource "aws_sagemaker_endpoint" "inference_endpoint" {
-  name                 = "inference-endpoint"
-  endpoint_config_name = aws_sagemaker_endpoint_configuration.inference_endpoint_config.name
 
-  tags = {
-    Name = "dev-endpoint"
-  }
-}
+# ## Inference endpoint
+# resource "aws_sagemaker_endpoint" "inference_endpoint" {
+#   name                 = "inference-endpoint"
+#   endpoint_config_name = aws_sagemaker_endpoint_configuration.inference_endpoint_config.name
 
-resource "aws_sagemaker_endpoint_configuration" "inference_endpoint_config" {
-  name = "inference-endpoint-config"
+#   tags = {
+#     Name = "dev-endpoint"
+#   }
+# }
 
-  production_variants {
-    variant_name           = "DevVariant"
-    model_name             = "CoordinatesPredictionModel"
-    initial_instance_count = 1
-    instance_type          = "ml.t2.medium"
+# resource "aws_sagemaker_endpoint_configuration" "inference_endpoint_config" {
+#   name = "inference-endpoint-config"
 
-    serverless_config {
-      max_concurrency = 10
-      memory_size_in_mb = 1024
-    }
-  }
+#   production_variants {
+#     variant_name           = "DevVariant"
+#     model_name             = "kmeansTestModel"
 
-  tags = {
-    Name = "dev-endpoint-config"
-  }
-}
+#     serverless_config {
+#       max_concurrency = 10
+#       memory_size_in_mb = 3072
+#     }
+#   }
+
+#   tags = {
+#     Name = "dev-endpoint-config"
+#   }
+# }
 
 # todo: add model
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_model
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/sagemaker_prebuilt_ecr_image
+
+
+## Sagemaker Model
+resource "aws_sagemaker_model" "kmeansTestModel" {
+  name               = "kmeansTestModel"
+  execution_role_arn = aws_iam_role.modelIamRole.arn
+
+  primary_container {
+    image = data.aws_sagemaker_prebuilt_ecr_image.kmeansEcrImage.registry_path
+  }
+}
+
+resource "aws_iam_role" "modelIamRole" {
+  assume_role_policy = data.aws_iam_policy_document.sagemaker_assume_role.json
+}
+
+data "aws_iam_policy_document" "sagemaker_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["sagemaker.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_sagemaker_prebuilt_ecr_image" "kmeansEcrImage" {
+  repository_name = "kmeans"
+}
