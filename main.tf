@@ -100,17 +100,7 @@ resource "aws_sagemaker_model" "vegetables_classification_model" {
   }
 }
 
-
-resource "aws_iam_role" "modelIamRole" {
-  name               = "model-deploy-access-role"
-  assume_role_policy = data.aws_iam_policy_document.sagemaker_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "policy_attachment" {
-  role       = aws_iam_role.modelIamRole.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
-}
-
+## Sagemaker role
 data "aws_iam_policy_document" "sagemaker_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -119,6 +109,33 @@ data "aws_iam_policy_document" "sagemaker_role" {
       type        = "Service"
       identifiers = ["sagemaker.amazonaws.com"]
     }
-
   }
+}
+
+resource "aws_iam_role" "modelIamRole" {
+  name               = "model-deploy-access-role"
+  path               = "/system/"
+  assume_role_policy = data.aws_iam_policy_document.sagemaker_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "policy_attachment" {
+  role       = aws_iam_role.modelIamRole.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "read_policy_attachment" {
+  role       = aws_iam_role.modelIamRole.name
+  policy_arn = aws_iam_policy.read_data_policy.arn
+}
+
+data "aws_iam_policy_document" "read_data_policy_document" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::classification-images-bucket"]
+  }
+}
+
+resource "aws_iam_policy" "read_data_policy" {
+  name   = "read_data_policy"
+  policy = data.aws_iam_policy_document.read_data_policy_document.json
 }
